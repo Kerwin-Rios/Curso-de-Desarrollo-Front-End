@@ -1,0 +1,106 @@
+//Property of KERS
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lista de Tareas Kerwin</title>
+  <link rel="stylesheet" href="estilos.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>Lista de Tareas</h2>
+    <input type="text" id="tarea" placeholder="Nueva tarea">
+    <input type="time" id="horaTarea">
+    <button id="añadirTarea">Añadir Tarea</button>
+    <ul id="listaTareas"></ul>
+    <div id="errorMessage" class="error"></div>
+  </div>
+
+  <script>
+    function guardarTareas() {
+      const tareas = [];
+      $("#listaTareas li").each(function () {
+        const texto = $(this).find(".textoTarea").text();
+        const hora = $(this).data("hora");
+        const realizada = $(this).hasClass("realizada");
+        tareas.push({ texto, hora, realizada });
+      });
+      localStorage.setItem("tareas", JSON.stringify(tareas));
+    }
+
+    function cargarTareas() {
+      const tareas = JSON.parse(localStorage.getItem("tareas")) || [];
+      tareas.forEach(t => {
+        agregarTareaAlDOM(t.texto, t.hora, t.realizada);
+      });
+    }
+
+    function agregarTareaAlDOM(texto, hora, realizada = false) {
+      const tareaHTML = `
+        <li class="${realizada ? 'realizada' : ''}" data-hora="${hora}">
+          <span class="textoTarea">${texto}</span>
+          <small>Hora: ${hora}</small>
+          <div class="task-buttons">
+            <button class="realizar" aria-label="Marcar tarea realizada">Marcar Realizada</button>
+            <button class="remover" aria-label="Remover tarea">Remover</button>
+          </div>
+        </li>
+      `;
+      $("#listaTareas").append(tareaHTML);
+      guardarTareas();
+    }
+
+    function resaltarTareasCercanas() {
+      const ahora = new Date();
+      const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
+      
+      $("#listaTareas li").each(function() {
+        const horaTarea = $(this).data("hora");
+        if (horaTarea) {
+          const [h, m] = horaTarea.split(":").map(Number);
+          const minutosTarea = h * 60 + m;
+          if (minutosTarea - horaActual <= 30 && minutosTarea - horaActual >= 0) {
+            $(this).addClass("proxima");
+          } else {
+            $(this).removeClass("proxima");
+          }
+        }
+      });
+    }
+
+    $(document).ready(function () {
+      cargarTareas();
+      resaltarTareasCercanas();
+      setInterval(resaltarTareasCercanas, 60000);
+
+      $("#añadirTarea").click(function () {
+        const tarea = $("#tarea").val().trim();
+        const hora = $("#horaTarea").val();
+
+        if (tarea !== "" && hora !== "") {
+          agregarTareaAlDOM(tarea, hora);
+          $("#tarea").val("");
+          $("#horaTarea").val("");
+          $("#errorMessage").text("");
+        } else {
+          $("#errorMessage").text("¡Por favor, ingresa una tarea y su hora!");
+        }
+      });
+
+      $("#listaTareas").on("click", ".remover", function () {
+        $(this).closest("li").remove();
+        guardarTareas();
+      });
+
+      $("#listaTareas").on("click", ".realizar", function () {
+        const li = $(this).closest("li");
+        li.toggleClass("realizada");
+        $(this).text(li.hasClass("realizada") ? "Desmarcar" : "Marcar Realizada");
+        guardarTareas();
+      });
+    });
+  </script>
+</body>
+</html>
